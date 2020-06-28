@@ -22,17 +22,15 @@ func New() *Emitter {
 
 // On 增加事件监听
 func (e *Emitter) On(name string, handler ...Handler) *Emitter {
-	e.lisMu.RLock()
+	e.lisMu.Lock()
+	defer e.lisMu.Unlock()
 	handlers, ok := e.listener[name]
-	e.lisMu.RUnlock()
 	if !ok {
 		handlers = handler
 	} else {
 		handlers = append(handlers, handler...)
 	}
-	e.lisMu.Lock()
 	e.listener[name] = handlers
-	e.lisMu.Unlock()
 	return e
 }
 
@@ -40,13 +38,13 @@ func (e *Emitter) On(name string, handler ...Handler) *Emitter {
 // Off("evt") 取消所有
 // Off("evt", handler1, handler2) 取消指定函数
 func (e *Emitter) Off(name string, handler ...Handler) *Emitter {
+	e.lisMu.Lock()
+	defer e.lisMu.Unlock()
 	if len(handler) == 0 {
 		delete(e.listener, name)
 		return e
 	}
-	e.lisMu.RLock()
 	handlers, ok := e.listener[name]
-	e.lisMu.RUnlock()
 	if !ok || len(handlers) == 0 {
 		return e
 	}
@@ -62,10 +60,7 @@ func (e *Emitter) Off(name string, handler ...Handler) *Emitter {
 			nextHandlers = append(nextHandlers, existH)
 		}
 	}
-
-	e.lisMu.Lock()
 	e.listener[name] = nextHandlers
-	e.lisMu.Unlock()
 	return e
 }
 
